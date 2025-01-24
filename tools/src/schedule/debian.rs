@@ -73,6 +73,7 @@ pub struct DebianSourcePkg {
     pub directory: String,
     pub architecture: String,
     pub uploaders: Vec<String>,
+    pub extra_source_only: bool,
 }
 
 impl DebianSourcePkg {
@@ -135,6 +136,7 @@ pub struct NewPkg {
     architecture: Option<String>,
     filename: Option<String>,
     uploaders: Vec<String>,
+    extra_source_only: bool,
 }
 
 pub trait AnyhowTryFrom<T>: Sized {
@@ -150,6 +152,7 @@ impl AnyhowTryFrom<NewPkg> for DebianSourcePkg {
             directory: new.directory.ok_or_else(|| format_err!("Missing directory field"))?,
             architecture: new.architecture.ok_or_else(|| format_err!("Missing architecture field"))?,
             uploaders: new.uploaders,
+            extra_source_only: new.extra_source_only.ok_or_else(|| format_err!("Missing extra_source_only field"))?,
         })
     }
 }
@@ -243,6 +246,9 @@ pub fn extract_pkgs_uncompressed<T: AnyhowTryFrom<NewPkg>, R: BufRead>(r: R) -> 
                         uploaders.push(uploader.to_string());
                     }
                     pkg.uploaders = uploaders;
+                },
+                "Extra-Source-Only" => if b == "yes" {
+                    pkg.extra_source_only = true;
                 },
                 _ => (),
             }
@@ -362,6 +368,10 @@ pub async fn sync(http: &http::Client, sync: &PkgsSync) -> Result<Vec<PkgGroup>>
 
                 let src = sources.get(&pkg)?;
                 debug!("Matched binary package to source package: {:?} {:?}", src.base, src.version);
+
+                if src.extra_source_only {
+                    continue;
+                }
 
                 out.push(&src, pkg, &sync.source, sync.distro.clone(), sync.suite.clone());
             }
