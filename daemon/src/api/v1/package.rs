@@ -92,7 +92,7 @@ fn transition_binary_packages_base() -> _ {
         .select((
             binary_packages::name,
             binary_packages::version,
-            source_packages::distribution,
+            binary_packages::architecture,
             rebuild_artifacts::status.nullable(),
         ))
 }
