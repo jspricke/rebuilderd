@@ -94,6 +94,8 @@ fn transition_binary_packages_base() -> _ {
             binary_packages::version,
             binary_packages::architecture,
             rebuild_artifacts::status.nullable(),
+            r1.field(rebuilds::id).nullable(),
+            rebuild_artifacts::diffoscope_log_id.nullable(),
         ))
 }
 

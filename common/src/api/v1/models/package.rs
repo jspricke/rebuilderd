@@ -74,4 +74,6 @@ pub struct TransitionBinaryPackage {
     pub version: String,
     pub architecture: String,
     pub status: Option<ArtifactStatus>,
+    pub build_id: Option<i32>,
+    pub diffoscope_log_id: Option<i32>,
 }
