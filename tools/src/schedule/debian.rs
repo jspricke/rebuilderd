@@ -448,34 +448,39 @@ pub async fn sync(http: &http::Client, sync: &PkgsSync) -> Result<Vec<PackageRep
 
         for component in &sync.components {
             let base_url = format!("{}/dists/{}", release.source(&sync.source), release.name());
+            let source_component = if component.ends_with("/debian-installer") {
+                if let Some((a, _)) = component.split_once('/') {
+                    a
+                } else {
+                    component
+                }
+            } else {
+                component
+            };
 
             // Downloading source package index
-            let db_url = format!("{base_url}/{component}/source/Sources.xz");
+            let db_url = format!("{base_url}/{source_component}/source/Sources.xz");
             let bytes = fetch_url_or_path(http, &db_url).await?;
 
             info!("Building map of all source packages");
             source_pkgs.import_compressed_source_package_file(&bytes)?;
 
             for arch in &sync.architectures {
-                for db_url in [
-                    // Binary package index
-                    format!("{base_url}/{component}/binary-{arch}/Packages.xz"),
-                    // Binary installer package index
-                    format!("{base_url}/{component}/debian-installer/binary-{arch}/Packages.xz"),
-                ] {
-                    match fetch_url_or_path(http, &db_url).await {
-                        Ok(bytes) => {
-                            state.import_compressed_binary_package_file(
-                                &bytes,
-                                &source_pkgs,
-                                release,
-                                component,
-                                sync,
-                            )?;
-                        }
-                        Err(e) => {
-                            warn!("{}, skipping", e);
-                        }
+                // Downloading binary package index
+                let db_url = format!("{base_url}/{component}/binary-{arch}/Packages.xz");
+
+                match fetch_url_or_path(http, &db_url).await {
+                    Ok(bytes) => {
+                        state.import_compressed_binary_package_file(
+                            &bytes,
+                            &source_pkgs,
+                            release,
+                            component,
+                            sync,
+                        )?;
+                    }
+                    Err(e) => {
+                        warn!("{}, skipping", e);
                     }
                 }
             }
